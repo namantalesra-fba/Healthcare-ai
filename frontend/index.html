@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Healthcare AI | Smart Health Screening</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- =========================
+     HEADER
+========================= -->
+
+<header class="header">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            🩺
+        </div>
+
+        <div>
+            <h1>Healthcare AI</h1>
+
+            <p>
+                Local AI-Powered Healthcare Screening & Appointment System
+            </p>
+        </div>
+
+    </div>
+
+    <div class="status">
+
+        <span class="status-dot"></span>
+
+        <span>Local AI • API-Free</span>
+
+    </div>
+
+</header>
+
+
+<!-- =========================
+     MAIN
+========================= -->
+
+<main class="container">
+
+
+<!-- =========================
+     HERO
+========================= -->
+
+<section class="hero">
+
+    <div class="hero-text">
+
+        <span class="badge">
+            PRIVATE • LOCAL • API-FREE
+        </span>
+
+        <h2>
+            Your symptoms.
+            <span>
+                Smarter screening.
+            </span>
+        </h2>
+
+        <p>
+            Describe how you feel using your voice or text.
+            Healthcare AI uses local NLP and a machine learning
+            model to identify possible conditions, recommend a
+            specialist and help you book an appointment.
+        </p>
+
+        <div class="hero-features">
+
+            <div class="hero-feature">
+                <span>🎙️</span>
+                <div>
+                    <strong>Voice Input</strong>
+                    <small>Web Speech API</small>
+                </div>
+            </div>
+
+            <div class="hero-feature">
+                <span>🧠</span>
+                <div>
+                    <strong>Local NLP</strong>
+                    <small>Symptom extraction</small>
+                </div>
+            </div>
+
+            <div class="hero-feature">
+                <span>🤖</span>
+                <div>
+                    <strong>ML Prediction</strong>
+                    <small>Locally trained model</small>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- VOICE CARD -->
+
+    <div class="voice-card">
+
+        <div class="voice-card-label">
+            VOICE ASSISTANT
+        </div>
+
+        <button
+            id="micBtn"
+            class="mic-button"
+            aria-label="Start voice input">
+
+            <span class="mic-icon">
+                🎙️
+            </span>
+
+        </button>
+
+        <h3>
+            Speak Your Symptoms
+        </h3>
+
+        <p id="micStatus">
+            Click the microphone to start speaking
+        </p>
+
+        <div class="voice-status-line">
+            <span class="status-dot"></span>
+            Voice recognition ready
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     SYMPTOM INPUT
+========================= -->
+
+<section class="input-card">
+
+    <div class="section-heading">
+
+        <div>
+
+            <span class="mini-label">
+                STEP 01
+            </span>
+
+            <h2>
+                Describe Your Symptoms
+            </h2>
+
+            <p>
+                Speak naturally or type what you are experiencing.
+            </p>
+
+        </div>
+
+        <span class="input-label">
+            VOICE / TEXT
+        </span>
+
+    </div>
+
+
+    <div class="textarea-wrapper">
+
+        <textarea
+            id="symptomInput"
+            rows="5"
+            placeholder="Example: I have a headache and nausea. I have been vomiting since morning..."></textarea>
+
+        <div class="textarea-hint">
+            💡 Try describing multiple symptoms in one sentence.
+        </div>
+
+    </div>
+
+
+    <div class="input-actions">
+
+        <button
+            id="analyzeBtn"
+            class="primary-button">
+
+            <span
+                id="analyzeSpinner"
+                class="spinner hidden">
+            </span>
+
+            <span id="analyzeBtnText">
+                Analyze Symptoms
+            </span>
+
+        </button>
+
+
+        <button
+            id="clearBtn"
+            class="secondary-button">
+
+            Clear
+
+        </button>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     ERROR
+========================= -->
+
+<div
+    id="errorBanner"
+    class="error-banner hidden">
+</div>
+
+
+<!-- =========================
+     RESULTS
+========================= -->
+
+<section
+    id="resultsSection"
+    class="results-section hidden">
+
+
+    <!-- RESULT HEADER -->
+
+    <div class="results-header">
+
+        <div>
+
+            <span class="badge">
+                AI SCREENING RESULT
+            </span>
+
+            <h2>
+                Healthcare AI Assessment
+            </h2>
+
+            <p>
+                Results generated from your detected symptoms.
+            </p>
+
+        </div>
+
+
+        <button
+            id="speakBtn"
+            class="speak-button">
+
+            🔊 Read Result
+
+        </button>
+
+    </div>
+
+
+    <!-- RESULT CARDS -->
+
+    <div class="result-grid">
+
+
+        <!-- CONDITION -->
+
+        <div class="result-card condition-card">
+
+            <div class="result-card-icon">
+                🧬
+            </div>
+
+            <span class="result-label">
+                POSSIBLE CONDITION
+            </span>
+
+            <h3 id="resCondition">
+                —
+            </h3>
+
+            <p>
+                Model prediction
+            </p>
+
+        </div>
+
+
+        <!-- CONFIDENCE -->
+
+        <div class="result-card">
+
+            <div class="result-card-icon">
+                📊
+            </div>
+
+            <span class="result-label">
+                MODEL CONFIDENCE
+            </span>
+
+            <h3 id="resConfidence">
+                —
+            </h3>
+
+            <p>
+                Prediction probability
+            </p>
+
+        </div>
+
+
+        <!-- SPECIALIST -->
+
+        <div class="result-card">
+
+            <div class="result-card-icon">
+                👨‍⚕️
+            </div>
+
+            <span class="result-label">
+                RECOMMENDED SPECIALIST
+            </span>
+
+            <h3 id="resSpecialist">
+                —
+            </h3>
+
+            <p>
+                Based on predicted condition
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         DETECTED SYMPTOMS
+    ========================= -->
+
+    <div class="details-card">
+
+        <div class="details-title">
+
+            <div>
+
+                <span class="mini-label">
+                    NLP PROCESSING
+                </span>
+
+                <h3>
+                    Detected Symptoms
+                </h3>
+
+            </div>
+
+            <span>
+                Local NLP
+            </span>
+
+        </div>
+
+        <div
+            id="resSymptomsList"
+            class="symptoms-list">
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         TOP MATCHES
+    ========================= -->
+
+    <div class="details-card">
+
+        <div class="details-title">
+
+            <div>
+
+                <span class="mini-label">
+                    MACHINE LEARNING
+                </span>
+
+                <h3>
+                    Top Candidate Matches
+                </h3>
+
+            </div>
+
+            <span>
+                Multinomial Naive Bayes
+            </span>
+
+        </div>
+
+        <ul
+            id="resTopMatches"
+            class="matches-list">
+        </ul>
+
+    </div>
+
+
+    <!-- =========================
+         DISCLAIMER
+    ========================= -->
+
+    <div class="disclaimer">
+
+        <div class="disclaimer-icon">
+            ⚠️
+        </div>
+
+        <div>
+
+            <h3>
+                Important Medical Notice
+            </h3>
+
+            <p id="resDisclaimer">
+
+                This is an educational screening system,
+                not a medical diagnosis.
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         APPOINTMENT
+    ========================= -->
+
+    <div
+        id="doctorSection"
+        class="doctor-section">
+
+
+        <div class="doctor-section-header">
+
+            <div>
+
+                <span class="badge">
+                    STEP 04 • APPOINTMENT
+                </span>
+
+                <h2>
+                    Find a Doctor
+                </h2>
+
+                <p>
+                    Based on the recommended specialist,
+                    view doctors and available appointment slots.
+                </p>
+
+            </div>
+
+
+            <button
+                id="findDoctorsBtn"
+                class="primary-button">
+
+                👨‍⚕️ Find Available Doctors
+
+            </button>
+
+        </div>
+
+
+        <!-- DOCTORS -->
+
+        <div
+            id="doctorsList"
+            class="doctors-list">
+        </div>
+
+
+        <!-- =========================
+             SLOTS
+        ========================= -->
+
+        <div
+            id="slotsSection"
+            class="slots-section hidden">
+
+            <div class="details-title">
+
+                <div>
+
+                    <span class="mini-label">
+                        STEP 05
+                    </span>
+
+                    <h3>
+                        Available Appointment Slots
+                    </h3>
+
+                </div>
+
+                <span id="selectedDoctorName">
+                    Select a doctor
+                </span>
+
+            </div>
+
+
+            <div
+                id="slotsList"
+                class="slots-list">
+            </div>
+
+        </div>
+
+
+        <!-- =========================
+             PATIENT DETAILS
+        ========================= -->
+
+        <div
+            id="patientSection"
+            class="patient-section hidden">
+
+            <div class="details-title">
+
+                <div>
+
+                    <span class="mini-label">
+                        PATIENT INFORMATION
+                    </span>
+
+                    <h3>
+                        Patient Details
+                    </h3>
+
+                </div>
+
+                <span>
+                    Secure local booking
+                </span>
+
+            </div>
+
+
+            <div class="patient-form">
+
+                <div class="form-group">
+
+                    <label for="patientName">
+                        Full Name
+                    </label>
+
+                    <input
+                        id="patientName"
+                        type="text"
+                        placeholder="Enter patient name">
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="patientContact">
+                        Contact Number
+                    </label>
+
+                    <input
+                        id="patientContact"
+                        type="tel"
+                        placeholder="Enter phone number">
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="bookingSummary"
+                class="booking-summary">
+            </div>
+
+
+            <button
+                id="confirmBookingBtn"
+                class="primary-button">
+
+                ✅ Confirm Appointment
+
+            </button>
+
+        </div>
+
+
+        <!-- =========================
+             BOOKING CONFIRMATION
+        ========================= -->
+
+        <div
+            id="bookingConfirmation"
+            class="booking-confirmation hidden">
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         NEW CONSULTATION
+    ========================= -->
+
+    <button
+        id="newConsultationBtn"
+        class="new-consultation-button">
+
+        ↻ Start New Consultation
+
+    </button>
+
+
+</section>
+
+
+<!-- =========================
+     WORKFLOW
+========================= -->
+
+<section class="how-section">
+
+    <div class="section-heading centered">
+
+        <span class="badge">
+            SYSTEM ARCHITECTURE
+        </span>
+
+        <h2>
+            How Healthcare AI Works
+        </h2>
+
+        <p>
+            From voice input to appointment booking,
+            the entire workflow runs locally.
+        </p>
+
+    </div>
+
+
+    <div class="workflow">
+
+
+        <!-- STEP 1 -->
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                01
+            </div>
+
+            <div class="step-icon">
+                🎙️
+            </div>
+
+            <h3>
+                Voice Input
+            </h3>
+
+            <p>
+                Browser Web Speech API converts
+                your voice into text.
+            </p>
+
+        </div>
+
+
+        <div class="workflow-line"></div>
+
+
+        <!-- STEP 2 -->
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                02
+            </div>
+
+            <div class="step-icon">
+                🧠
+            </div>
+
+            <h3>
+                NLP Processing
+            </h3>
+
+            <p>
+                Local NLP identifies important
+                symptoms from the description.
+            </p>
+
+        </div>
+
+
+        <div class="workflow-line"></div>
+
+
+        <!-- STEP 3 -->
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                03
+            </div>
+
+            <div class="step-icon">
+                🤖
+            </div>
+
+            <h3>
+                ML Prediction
+            </h3>
+
+            <p>
+                A locally trained machine learning
+                model generates possible matches.
+            </p>
+
+        </div>
+
+
+        <div class="workflow-line"></div>
+
+
+        <!-- STEP 4 -->
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                04
+            </div>
+
+            <div class="step-icon">
+                👨‍⚕️
+            </div>
+
+            <h3>
+                Specialist Mapping
+            </h3>
+
+            <p>
+                The predicted condition is mapped
+                to a relevant specialist.
+            </p>
+
+        </div>
+
+
+        <div class="workflow-line"></div>
+
+
+        <!-- STEP 5 -->
+
+        <div class="workflow-step">
+
+            <div class="step-number">
+                05
+            </div>
+
+            <div class="step-icon">
+                📅
+            </div>
+
+            <h3>
+                Appointment
+            </h3>
+
+            <p>
+                Select a doctor, choose a slot
+                and book the appointment.
+            </p>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+<!-- =========================
+     TECHNOLOGY STACK
+========================= -->
+
+<section class="tech-section">
+
+    <div class="section-heading centered">
+
+        <span class="badge">
+            TECHNOLOGY STACK
+        </span>
+
+        <h2>
+            Built With
+        </h2>
+
+    </div>
+
+
+    <div class="tech-grid">
+
+        <div class="tech-card">
+            <span>🌐</span>
+            <strong>HTML / CSS / JS</strong>
+            <small>Frontend Interface</small>
+        </div>
+
+        <div class="tech-card">
+            <span>🎙️</span>
+            <strong>Web Speech API</strong>
+            <small>Voice Recognition</small>
+        </div>
+
+        <div class="tech-card">
+            <span>⚡</span>
+            <strong>FastAPI</strong>
+            <small>Local Backend</small>
+        </div>
+
+        <div class="tech-card">
+            <span>🐍</span>
+            <strong>Python</strong>
+            <small>AI Processing</small>
+        </div>
+
+        <div class="tech-card">
+            <span>🤖</span>
+            <strong>Scikit-Learn</strong>
+            <small>ML Prediction</small>
+        </div>
+
+        <div class="tech-card">
+            <span>🗄️</span>
+            <strong>SQLite</strong>
+            <small>Local Database</small>
+        </div>
+
+    </div>
+
+</section>
+
+
+</main>
+
+
+<!-- =========================
+     FOOTER
+========================= -->
+
+<footer class="footer">
+
+    <div>
+
+        <strong>
+            Healthcare AI
+        </strong>
+
+        <span>
+            • Local AI Healthcare Screening System
+        </span>
+
+    </div>
+
+    <p>
+        Educational demonstration only • Not a medical diagnosis
+    </p>
+
+</footer>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
