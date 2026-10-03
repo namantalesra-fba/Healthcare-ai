@@ -1,8 +1,7 @@
 import os
-import joblib
+import json
+import math
 import pandas as pd
-
-from sklearn.naive_bayes import MultinomialNB
 
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -20,12 +19,7 @@ MODELS_DIR = os.path.join(
 
 MODEL_PATH = os.path.join(
     MODELS_DIR,
-    "disease_classifier.joblib"
-)
-
-FEATURE_LIST_PATH = os.path.join(
-    MODELS_DIR,
-    "mlb.joblib"
+    "disease_classifier.json"
 )
 
 
@@ -44,89 +38,256 @@ def train():
 
     print(f"Dataset loaded: {len(df)} rows")
 
-    # Separate symptoms and disease
     feature_columns = [
-        col for col in df.columns
-        if col != "disease"
+        column
+        for column in df.columns
+        if column != "disease"
     ]
 
-    X = df[feature_columns]
-    y = df["disease"]
-
-    # Shuffle the dataset
+    # Shuffle dataset
     df = df.sample(
         frac=1,
         random_state=42
     ).reset_index(drop=True)
 
-    # Manual 75% / 25% split
     split_index = int(len(df) * 0.75)
 
     train_df = df.iloc[:split_index]
     test_df = df.iloc[split_index:]
 
-    X_train = train_df[feature_columns]
-    y_train = train_df["disease"]
+    print(f"Training samples: {len(train_df)}")
+    print(f"Testing samples: {len(test_df)}")
 
-    X_test = test_df[feature_columns]
-    y_test = test_df["disease"]
-
-    print(f"Training samples: {len(X_train)}")
-    print(f"Testing samples: {len(X_test)}")
-
-    # Create ML model
-    print("\nTraining Multinomial Naive Bayes...")
-
-    model = MultinomialNB()
-
-    model.fit(
-        X_train,
-        y_train
+    diseases = sorted(
+        train_df["disease"].unique()
     )
 
-    # Make predictions
-    predictions = model.predict(X_test)
+    total_training_samples = len(train_df)
 
-    # Calculate accuracy manually
-    correct = sum(
-        actual == predicted
-        for actual, predicted in zip(
-            y_test,
-            predictions
+    model = {
+        "feature_columns": feature_columns,
+        "classes": diseases,
+        "class_counts": {},
+        "feature_counts": {},
+        "total_training_samples": total_training_samples
+    }
+
+    # =========================================================
+    # COUNT EACH DISEASE
+    # =========================================================
+
+    for disease in diseases:
+
+        count = len(
+            train_df[
+                train_df["disease"] == disease
+            ]
         )
+
+        model["class_counts"][disease] = count
+
+    # =========================================================
+    # COUNT SYMPTOMS FOR EACH DISEASE
+    # =========================================================
+
+    for disease in diseases:
+
+        disease_rows = train_df[
+            train_df["disease"] == disease
+        ]
+
+        model["feature_counts"][disease] = {}
+
+        for feature in feature_columns:
+
+            count = int(
+                disease_rows[feature].sum()
+            )
+
+            model["feature_counts"][disease][feature] = count
+
+    # =========================================================
+    # TEST THE MODEL
+    # =========================================================
+
+    correct = 0
+
+    print("\nTesting model...")
+
+    for _, row in test_df.iterrows():
+
+        symptoms = [
+            feature
+            for feature in feature_columns
+            if row[feature] == 1
+        ]
+
+        prediction = predict_from_model(
+            model,
+            symptoms
+        )
+
+        actual = row["disease"]
+
+        if prediction["condition"] == actual:
+            correct += 1
+
+        print(
+            f"Actual: {actual:<25} "
+            f"Predicted: {prediction['condition']}"
+        )
+
+    accuracy = (
+        correct / len(test_df)
+        if len(test_df) > 0
+        else 0
     )
 
-    accuracy = correct / len(y_test)
+    print("\n-----------------------------")
+    print("Training Results")
+    print("-----------------------------")
 
-    print("\n--- Training Results ---")
     print(
         f"Model Accuracy: {accuracy * 100:.2f}%"
     )
+
     print(
         f"Correct predictions: "
-        f"{correct}/{len(y_test)}"
-    )
-    print("------------------------")
-
-    # Save trained model
-    joblib.dump(
-        model,
-        MODEL_PATH
+        f"{correct}/{len(test_df)}"
     )
 
-    # Save symptom feature names
-    joblib.dump(
-        feature_columns,
-        FEATURE_LIST_PATH
-    )
+    # =========================================================
+    # SAVE MODEL
+    # =========================================================
+
+    with open(
+        MODEL_PATH,
+        "w",
+        encoding="utf-8"
+    ) as file:
+
+        json.dump(
+            model,
+            file,
+            indent=4
+        )
 
     print("\nModel saved to:")
     print(MODEL_PATH)
 
-    print("\nFeature list saved to:")
-    print(FEATURE_LIST_PATH)
-
     print("\nTraining completed successfully!")
+
+
+def predict_from_model(
+    model,
+    symptoms
+):
+
+    feature_columns = model["feature_columns"]
+
+    classes = model["classes"]
+
+    class_counts = model["class_counts"]
+
+    feature_counts = model["feature_counts"]
+
+    total_samples = model["total_training_samples"]
+
+    normalized_symptoms = {
+        symptom.strip().lower().replace(" ", "_")
+        for symptom in symptoms
+    }
+
+    scores = {}
+
+    # =========================================================
+    # CALCULATE NAIVE BAYES SCORE
+    # =========================================================
+
+    for disease in classes:
+
+        disease_count = class_counts[disease]
+
+        # Prior probability
+        prior = (
+            disease_count /
+            total_samples
+        )
+
+        # Start with log probability
+        log_probability = math.log(prior)
+
+        # Number of training rows belonging
+        # to this disease
+        denominator = disease_count + 2
+
+        for feature in feature_columns:
+
+            feature_count = feature_counts[
+                disease
+            ][feature]
+
+            # Laplace smoothing
+            if feature in normalized_symptoms:
+
+                probability = (
+                    feature_count + 1
+                ) / denominator
+
+            else:
+
+                probability = (
+                    (disease_count - feature_count)
+                    + 1
+                ) / denominator
+
+            log_probability += math.log(
+                probability
+            )
+
+        scores[disease] = log_probability
+
+    # =========================================================
+    # NORMALIZE SCORES
+    # =========================================================
+
+    max_score = max(scores.values())
+
+    exp_scores = {
+        disease:
+        math.exp(score - max_score)
+
+        for disease, score
+        in scores.items()
+    }
+
+    total_score = sum(
+        exp_scores.values()
+    )
+
+    probabilities = {
+        disease:
+        value / total_score
+
+        for disease, value
+        in exp_scores.items()
+    }
+
+    ranked = sorted(
+        probabilities.items(),
+        key=lambda item: item[1],
+        reverse=True
+    )
+
+    condition = ranked[0][0]
+
+    confidence = ranked[0][1]
+
+    return {
+        "condition": condition,
+        "confidence": confidence,
+        "probabilities": ranked
+    }
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 from typing import Optional
 from datetime import datetime
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -35,7 +36,7 @@ app.add_middleware(
 
 
 # ============================================================
-# ML PREDICTOR
+# MACHINE LEARNING MODEL
 # ============================================================
 
 predictor = DiseasePredictor()
@@ -59,7 +60,7 @@ class AppointmentRequest(BaseModel):
 
 
 # ============================================================
-# HOME
+# BASIC ROUTES
 # ============================================================
 
 @app.get("/")
@@ -69,10 +70,6 @@ def home():
     }
 
 
-# ============================================================
-# HEALTH CHECK
-# ============================================================
-
 @app.get("/health")
 def health():
     return {
@@ -81,7 +78,7 @@ def health():
 
 
 # ============================================================
-# AI SYMPTOM PREDICTION
+# SYMPTOM PREDICTION
 # ============================================================
 
 @app.post("/predict")
@@ -89,27 +86,29 @@ def predict_symptoms(request: SymptomRequest):
 
     user_text = request.text
 
+    # Step 1: Extract symptoms using local rule-based NLP
     symptoms = extract_symptoms(user_text)
 
     if not symptoms:
         return {
             "success": False,
             "message": "No recognizable symptoms were detected.",
-            "symptoms": [],
+            "symptoms": []
         }
 
+    # Step 2: Predict disease using local ML model
     result = predictor.predict(symptoms)
 
     return {
         "success": True,
         "input": user_text,
         "symptoms": symptoms,
-        "prediction": result,
+        "prediction": result
     }
 
 
 # ============================================================
-# GET DOCTORS
+# DOCTOR SEARCH
 # ============================================================
 
 @app.get("/doctors")
@@ -123,6 +122,7 @@ def get_doctors(
 
         cursor = connection.cursor()
 
+        # Search by specialist
         if specialization:
 
             cursor.execute(
@@ -137,9 +137,10 @@ def get_doctors(
                 FROM doctors
                 WHERE LOWER(specialization) = LOWER(?)
                 """,
-                (specialization,),
+                (specialization,)
             )
 
+        # Return all doctors
         else:
 
             cursor.execute(
@@ -162,7 +163,7 @@ def get_doctors(
             "doctors": [
                 dict(doctor)
                 for doctor in doctors
-            ],
+            ]
         }
 
     finally:
@@ -171,7 +172,7 @@ def get_doctors(
 
 
 # ============================================================
-# GET AVAILABLE SLOTS
+# DOCTOR AVAILABLE SLOTS
 # ============================================================
 
 @app.get("/doctors/{doctor_id}/slots")
@@ -185,10 +186,7 @@ def get_doctor_slots(
 
         cursor = connection.cursor()
 
-        # ----------------------------------------------------
-        # Check doctor
-        # ----------------------------------------------------
-
+        # Find doctor
         cursor.execute(
             """
             SELECT
@@ -201,7 +199,7 @@ def get_doctor_slots(
             FROM doctors
             WHERE id = ?
             """,
-            (doctor_id,),
+            (doctor_id,)
         )
 
         doctor = cursor.fetchone()
@@ -213,10 +211,7 @@ def get_doctor_slots(
                 detail="Doctor not found"
             )
 
-        # ----------------------------------------------------
-        # Available slots
-        # ----------------------------------------------------
-
+        # Find available slots
         cursor.execute(
             """
             SELECT
@@ -231,7 +226,7 @@ def get_doctor_slots(
             AND is_booked = 0
             ORDER BY date, start_time
             """,
-            (doctor_id,),
+            (doctor_id,)
         )
 
         slots = cursor.fetchall()
@@ -242,7 +237,7 @@ def get_doctor_slots(
             "slots": [
                 dict(slot)
                 for slot in slots
-            ],
+            ]
         }
 
     finally:
@@ -251,7 +246,7 @@ def get_doctor_slots(
 
 
 # ============================================================
-# BOOK APPOINTMENT
+# APPOINTMENT BOOKING
 # ============================================================
 
 @app.post("/appointments")
@@ -266,7 +261,7 @@ def book_appointment(
         cursor = connection.cursor()
 
         # ----------------------------------------------------
-        # Check doctor
+        # 1. Check doctor
         # ----------------------------------------------------
 
         cursor.execute(
@@ -275,7 +270,7 @@ def book_appointment(
             FROM doctors
             WHERE id = ?
             """,
-            (request.doctor_id,),
+            (request.doctor_id,)
         )
 
         doctor = cursor.fetchone()
@@ -288,7 +283,7 @@ def book_appointment(
             )
 
         # ----------------------------------------------------
-        # Check slot
+        # 2. Check appointment slot
         # ----------------------------------------------------
 
         cursor.execute(
@@ -300,8 +295,8 @@ def book_appointment(
             """,
             (
                 request.slot_id,
-                request.doctor_id,
-            ),
+                request.doctor_id
+            )
         )
 
         slot = cursor.fetchone()
@@ -314,7 +309,7 @@ def book_appointment(
             )
 
         # ----------------------------------------------------
-        # Check whether slot is already booked
+        # 3. Check whether slot is already booked
         # ----------------------------------------------------
 
         if slot["is_booked"] == 1:
@@ -325,7 +320,7 @@ def book_appointment(
             )
 
         # ----------------------------------------------------
-        # Create timestamp
+        # 4. Create appointment timestamp
         # ----------------------------------------------------
 
         created_at = datetime.now().isoformat(
@@ -333,7 +328,7 @@ def book_appointment(
         )
 
         # ----------------------------------------------------
-        # Insert appointment
+        # 5. Insert appointment
         # ----------------------------------------------------
 
         cursor.execute(
@@ -357,14 +352,14 @@ def book_appointment(
                 request.patient_contact,
                 request.disease_predicted,
                 request.symptoms,
-                created_at,
-            ),
+                created_at
+            )
         )
 
         appointment_id = cursor.lastrowid
 
         # ----------------------------------------------------
-        # Mark slot as booked
+        # 6. Mark slot as booked
         # ----------------------------------------------------
 
         cursor.execute(
@@ -373,38 +368,53 @@ def book_appointment(
             SET is_booked = 1
             WHERE id = ?
             """,
-            (request.slot_id,),
+            (request.slot_id,)
         )
 
         # ----------------------------------------------------
-        # Commit transaction
+        # 7. Save changes
         # ----------------------------------------------------
 
         connection.commit()
 
         # ----------------------------------------------------
-        # Return confirmation
+        # 8. Return confirmation
         # ----------------------------------------------------
 
         return {
             "success": True,
             "message": "Appointment booked successfully",
+
             "appointment": {
+
                 "id": appointment_id,
-                "patient_name": request.patient_name,
-                "patient_contact": request.patient_contact,
-                "disease_predicted": request.disease_predicted,
-                "symptoms": request.symptoms,
-                "created_at": created_at,
-                "doctor": dict(doctor),
-                "slot": dict(slot),
-            },
+
+                "patient_name":
+                    request.patient_name,
+
+                "patient_contact":
+                    request.patient_contact,
+
+                "disease_predicted":
+                    request.disease_predicted,
+
+                "symptoms":
+                    request.symptoms,
+
+                "created_at":
+                    created_at,
+
+                "doctor":
+                    dict(doctor),
+
+                "slot":
+                    dict(slot)
+            }
         }
 
     except HTTPException:
 
         connection.rollback()
-
         raise
 
     except Exception as error:
@@ -419,3 +429,17 @@ def book_appointment(
     finally:
 
         connection.close()
+
+
+# ============================================================
+# RUN SERVER DIRECTLY
+# ============================================================
+
+if __name__ == "__main__":
+
+    uvicorn.run(
+        "main:app",
+        host="127.0.0.1",
+        port=8000,
+        reload=False
+    )

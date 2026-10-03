@@ -1,193 +1,343 @@
 import os
+import json
+import math
+
 from typing import Any, Dict, List
 
-import joblib
-import pandas as pd
 
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, "models")
+MODELS_DIR = os.path.join(
+    BASE_DIR,
+    "models"
+)
 
 MODEL_PATH = os.path.join(
     MODELS_DIR,
-    "disease_classifier.joblib"
-)
-
-FEATURE_LIST_PATH = os.path.join(
-    MODELS_DIR,
-    "mlb.joblib"
+    "disease_classifier.json"
 )
 
 
-# Educational condition -> specialist mapping
+# ============================================================
+# SPECIALIST MAPPING
+# ============================================================
+
 SPECIALIST_MAPPING = {
-    "Common Cold": "General Physician",
-    "Flu": "General Physician",
-    "Malaria": "General Physician",
-    "Acne": "Dermatologist",
-    "Eczema": "Dermatologist",
-    "Asthma": "Pulmonologist",
-    "Bronchitis": "Pulmonologist",
-    "Hypertension": "Cardiologist",
-    "Coronary Artery Disease": "Cardiologist",
-    "Migraine": "Neurologist",
+
+    "Common Cold":
+        "General Physician",
+
+    "Flu":
+        "General Physician",
+
+    "Malaria":
+        "General Physician",
+
+    "Acne":
+        "Dermatologist",
+
+    "Eczema":
+        "Dermatologist",
+
+    "Asthma":
+        "Pulmonologist",
+
+    "Bronchitis":
+        "Pulmonologist",
+
+    "Hypertension":
+        "Cardiologist",
+
+    "Coronary Artery Disease":
+        "Cardiologist",
+
+    "Migraine":
+        "Neurologist",
 }
 
 
 DEFAULT_SPECIALIST = "General Physician"
 
 
+# ============================================================
+# DISEASE PREDICTOR
+# ============================================================
+
 class DiseasePredictor:
 
     def __init__(self):
+
         self.model = None
+
         self.feature_columns = None
 
-        # Load the trained model
-        self._load_artifacts()
+        self._load_model()
 
-    def _load_artifacts(self):
-        """
-        Load the trained ML model and feature list.
-        """
 
-        if not os.path.exists(MODEL_PATH) or not os.path.exists(
-            FEATURE_LIST_PATH
-        ):
+    # ========================================================
+    # LOAD MODEL
+    # ========================================================
+
+    def _load_model(self):
+
+        if not os.path.exists(MODEL_PATH):
+
             raise FileNotFoundError(
-                "Model artifacts not found. Run 'python train_model.py' first."
+                "Model not found. "
+                "Run backend\\train_model.py first."
             )
 
-        self.model = joblib.load(MODEL_PATH)
+        with open(
+            MODEL_PATH,
+            "r",
+            encoding="utf-8"
+        ) as file:
 
-        self.feature_columns = joblib.load(
-            FEATURE_LIST_PATH
+            self.model = json.load(file)
+
+        self.feature_columns = (
+            self.model["feature_columns"]
         )
+
+
+    # ========================================================
+    # PREDICT
+    # ========================================================
 
     def predict(
         self,
         input_symptoms: List[str],
         top_n: int = 3
     ) -> Dict[str, Any]:
-        """
-        Accepts a list of symptom strings,
-        converts them into binary features,
-        and predicts possible conditions.
-        """
-
-        # ---------------------------------------------------------
-        # STEP 1: Normalize the incoming symptoms
-        # ---------------------------------------------------------
 
         normalized_inputs = {
-            s.strip().lower().replace(" ", "_")
-            for s in input_symptoms
+
+            symptom
+            .strip()
+            .lower()
+            .replace(" ", "_")
+
+            for symptom in input_symptoms
         }
 
-        # ---------------------------------------------------------
-        # STEP 2: Convert symptoms into binary feature vector
-        # ---------------------------------------------------------
+        # ----------------------------------------------------
+        # Empty input
+        # ----------------------------------------------------
 
-        feature_vector = [
-            1 if col in normalized_inputs else 0
-            for col in self.feature_columns
-        ]
+        if not normalized_inputs:
 
-        # ---------------------------------------------------------
-        # STEP 3: Handle unknown / empty symptoms
-        # ---------------------------------------------------------
-
-        if sum(feature_vector) == 0:
             return {
-                "predicted_condition": "Unknown",
-                "confidence": 0.0,
-                "recommended_specialist": DEFAULT_SPECIALIST,
-                "top_matches": [],
-                "disclaimer": (
+
+                "predicted_condition":
+                    "Unknown",
+
+                "confidence":
+                    0.0,
+
+                "recommended_specialist":
+                    DEFAULT_SPECIALIST,
+
+                "top_matches":
+                    [],
+
+                "disclaimer":
                     "Educational screening tool only. "
                     "Not a medical diagnosis."
-                ),
             }
 
-        # ---------------------------------------------------------
-        # STEP 4: Convert feature vector into DataFrame
-        # ---------------------------------------------------------
-        # The model was trained using named columns.
-        # Using the same column names during prediction
-        # removes the scikit-learn feature-name warning.
 
-        feature_df = pd.DataFrame(
-            [feature_vector],
-            columns=self.feature_columns
+        # ----------------------------------------------------
+        # Calculate probabilities
+        # ----------------------------------------------------
+
+        classes = self.model["classes"]
+
+        class_counts = self.model[
+            "class_counts"
+        ]
+
+        feature_counts = self.model[
+            "feature_counts"
+        ]
+
+        total_samples = self.model[
+            "total_training_samples"
+        ]
+
+        scores = {}
+
+
+        for disease in classes:
+
+            disease_count = class_counts[
+                disease
+            ]
+
+            # Prior probability
+            prior = (
+                disease_count /
+                total_samples
+            )
+
+            log_probability = math.log(
+                prior
+            )
+
+            denominator = (
+                disease_count + 2
+            )
+
+
+            for feature in self.feature_columns:
+
+                feature_count = (
+                    feature_counts[
+                        disease
+                    ][feature]
+                )
+
+                if feature in normalized_inputs:
+
+                    probability = (
+                        feature_count + 1
+                    ) / denominator
+
+                else:
+
+                    probability = (
+                        disease_count -
+                        feature_count +
+                        1
+                    ) / denominator
+
+                log_probability += math.log(
+                    probability
+                )
+
+
+            scores[disease] = (
+                log_probability
+            )
+
+
+        # ----------------------------------------------------
+        # Convert scores to probabilities
+        # ----------------------------------------------------
+
+        max_score = max(
+            scores.values()
         )
 
-        # ---------------------------------------------------------
-        # STEP 5: Get prediction probabilities
-        # ---------------------------------------------------------
+        exp_scores = {
 
-        probabilities = self.model.predict_proba(
-            feature_df
-        )[0]
+            disease:
+            math.exp(
+                score - max_score
+            )
 
-        classes = self.model.classes_
+            for disease, score
+            in scores.items()
+        }
 
-        # ---------------------------------------------------------
-        # STEP 6: Rank conditions by probability
-        # ---------------------------------------------------------
+        total_score = sum(
+            exp_scores.values()
+        )
+
+        probabilities = {
+
+            disease:
+            value / total_score
+
+            for disease, value
+            in exp_scores.items()
+        }
+
+
+        # ----------------------------------------------------
+        # Sort predictions
+        # ----------------------------------------------------
 
         ranked_matches = sorted(
-            zip(classes, probabilities),
-            key=lambda x: x[1],
+
+            probabilities.items(),
+
+            key=lambda item:
+                item[1],
+
             reverse=True
         )
 
-        # ---------------------------------------------------------
-        # STEP 7: Get top prediction
-        # ---------------------------------------------------------
 
-        top_predicted_condition, top_prob = ranked_matches[0]
-
-        # ---------------------------------------------------------
-        # STEP 8: Find recommended specialist
-        # ---------------------------------------------------------
-
-        recommended_specialist = SPECIALIST_MAPPING.get(
-            top_predicted_condition,
-            DEFAULT_SPECIALIST
+        top_condition = (
+            ranked_matches[0][0]
         )
 
-        # ---------------------------------------------------------
-        # STEP 9: Prepare top matches
-        # ---------------------------------------------------------
+        top_probability = (
+            ranked_matches[0][1]
+        )
+
+
+        specialist = (
+            SPECIALIST_MAPPING.get(
+                top_condition,
+                DEFAULT_SPECIALIST
+            )
+        )
+
 
         top_matches = [
+
             {
-                "condition": str(cond),
-                "probability": round(float(prob), 4)
+                "condition":
+                    str(condition),
+
+                "probability":
+                    round(
+                        float(probability),
+                        4
+                    )
             }
-            for cond, prob in ranked_matches[:top_n]
-            if prob > 0.0
+
+            for condition, probability
+            in ranked_matches[:top_n]
+
+            if probability > 0
         ]
 
-        # ---------------------------------------------------------
-        # STEP 10: Return final result
-        # ---------------------------------------------------------
+
+        # ----------------------------------------------------
+        # Final result
+        # ----------------------------------------------------
 
         return {
-            "predicted_condition": str(top_predicted_condition),
-            "confidence": round(float(top_prob), 4),
-            "recommended_specialist": recommended_specialist,
-            "top_matches": top_matches,
-            "disclaimer": (
-                "This is an educational screening system, "
-                "not a real medical diagnosis."
-            ),
+
+            "predicted_condition":
+                str(top_condition),
+
+            "confidence":
+                round(
+                    float(top_probability),
+                    4
+                ),
+
+            "recommended_specialist":
+                specialist,
+
+            "top_matches":
+                top_matches,
+
+            "disclaimer":
+                "This is an educational "
+                "screening system, not a "
+                "real medical diagnosis."
         }
 
 
-# =============================================================
-# QUICK SANITY TEST
-# =============================================================
+# ============================================================
+# SANITY TEST
+# ============================================================
 
 if __name__ == "__main__":
 
@@ -199,9 +349,13 @@ if __name__ == "__main__":
         "vomiting"
     ]
 
-    result = predictor.predict(sample_symptoms)
+    result = predictor.predict(
+        sample_symptoms
+    )
 
-    print("\n--- Predictor Sanity Test ---")
+    print(
+        "\n--- Predictor Sanity Test ---"
+    )
 
     print(
         "Input Symptoms:",
@@ -210,7 +364,9 @@ if __name__ == "__main__":
 
     print(
         "Predicted Condition:",
-        result["predicted_condition"]
+        result[
+            "predicted_condition"
+        ]
     )
 
     print(
@@ -220,17 +376,25 @@ if __name__ == "__main__":
 
     print(
         "Recommended Specialist:",
-        result["recommended_specialist"]
+        result[
+            "recommended_specialist"
+        ]
     )
 
     print(
         "Top Matches:",
-        result["top_matches"]
+        result[
+            "top_matches"
+        ]
     )
 
     print(
         "Disclaimer:",
-        result["disclaimer"]
+        result[
+            "disclaimer"
+        ]
     )
 
-    print("-----------------------------\n")
+    print(
+        "-----------------------------\n"
+    )
