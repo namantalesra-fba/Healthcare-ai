@@ -1,393 +1,957 @@
-<div align="center">
-
 # 🩺 Healthcare AI
 
-### Local, API-Free Symptom Screening & Appointment Booking
+### Voice-Assisted Healthcare Screening & Appointment Scheduling
 
-Voice input → NLP symptom extraction → ML prediction → specialist recommendation → appointment booking, all running on your own machine.
+A local, API-free healthcare assistance prototype that combines **voice input, rule-based NLP, machine learning, specialist recommendation, doctor lookup, and appointment scheduling** into one workflow.
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikitlearn&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white)
-![No External AI APIs](https://img.shields.io/badge/External%20AI%20APIs-None-success)
-![Status](https://img.shields.io/badge/Status-Educational%20Demo-blue)
-
-</div>
-
-> ⚠️ **Disclaimer:** This is an educational demonstration. It is **not** a medical diagnosis tool and is not a substitute for professional medical care. In an emergency, contact your local emergency services immediately.
+> ⚠️ **Medical Disclaimer:** This is an educational software prototype. It is **not a medical diagnosis system** and must not replace a qualified healthcare professional. Predictions are illustrative screening results based on a synthetic educational dataset.
 
 ---
 
-## 📑 Table of Contents
+## 📌 Project Overview
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [How It Works](#-how-it-works)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [Usage & Demo](#-usage--demo)
-- [API Reference](#-api-reference)
-- [Machine Learning Details](#-machine-learning-details)
-- [NLP Details](#-nlp-details)
-- [Database Schema](#-database-schema)
-- [Safety Layer](#-safety-layer)
-- [Limitations](#-limitations)
-- [Troubleshooting](#-troubleshooting)
-- [Future Scope](#-future-scope)
-- [Contributing](#-contributing)
-- [License](#-license)
-
----
-
-## 📌 Overview
-
-Many healthcare apps rely on paid AI APIs or heavy cloud infrastructure. **Healthcare AI** shows how a lightweight assistant can be built with purely **local technologies**.
+Healthcare AI is a web-based application designed to simplify the initial healthcare interaction.
 
 A user can:
 
-1. Describe symptoms by **voice or text**
-2. Have symptoms **extracted locally** with rule-based NLP
-3. Get **possible conditions** from a locally trained ML model
-4. Receive a **specialist recommendation**
-5. **Browse doctors** stored in a local database
-6. **View available slots**
-7. **Book an appointment** and receive a confirmation
+1. Enter symptoms using text or voice.
+2. Convert voice into text using the browser's Web Speech API.
+3. Extract recognized symptoms using rule-based NLP.
+4. Detect explicit disease mentions such as hypertension or asthma.
+5. Perform a basic safety check for selected red-flag symptoms.
+6. Predict a possible condition using a locally trained **Bernoulli Naive Bayes** model.
+7. Receive a recommended specialist category.
+8. View available doctors.
+9. View available appointment slots.
+10. Book an appointment.
+11. Store appointment and symptom information in a local SQLite database.
 
-No OpenAI, Gemini, or other cloud AI service is required.
+### Complete Flow
 
----
-
-## ✨ Features
-
-| Feature | Description |
-|---|---|
-| 🎙️ **Voice Input** | Speak symptoms using the browser's Web Speech API |
-| 🧠 **Local NLP** | Regex/rule-based extraction of symptoms from natural language |
-| 🤖 **ML Prediction** | Multinomial Naive Bayes classifier trained on a local dataset |
-| 👨‍⚕️ **Specialist Mapping** | Predicted condition → relevant specialist category |
-| 🗄️ **SQLite Storage** | Doctors, slots, appointments, and symptom history |
-| 📅 **Booking Flow** | Select doctor → pick slot → enter details → confirm |
-| 🚨 **Emergency Check** | Detects dangerous combinations and halts the normal flow |
-| 🔒 **Privacy-Friendly** | Core pipeline runs fully offline once dependencies are installed |
-
----
-
-## 🏗️ How It Works
-
-```mermaid
-flowchart TD
-    A[🎙️ Voice / 📝 Text Input] --> B[Web Speech API]
-    B --> C[Local NLP Processor]
-    C --> D[Symptom Extraction]
-    D --> E{Safety Check}
-    E -- Emergency --> F[🚨 Urgent Medical Warning]
-    E -- Normal --> G[Multinomial Naive Bayes Model]
-    G --> H[Possible Condition]
-    H --> I[Specialist Recommendation]
-    I --> J[(SQLite Database)]
-    J --> K[Doctor Selection]
-    K --> L[Available Slots]
-    L --> M[Patient Information]
-    M --> N[✅ Appointment Booked]
+```text
+Voice / Text Input
+        ↓
+Web Speech API
+        ↓
+Rule-Based NLP
+        ↓
+Safety Check
+        ↓
+Bernoulli Naive Bayes
+        ↓
+Possible Condition
+        ↓
+Specialist Mapping
+        ↓
+Doctor Lookup
+        ↓
+Available Slots
+        ↓
+Appointment Booking
+        ↓
+SQLite Database
 ```
 
 ---
 
-## 🧩 Architecture
+# 🎯 Problem Statement
 
-**1. Frontend** (HTML, CSS, JavaScript, Web Speech API)
-Handles the UI, voice and text input, prediction display, doctor and slot selection, the booking form, and confirmation.
+Healthcare portals can make the initial patient interaction unnecessarily complicated.
 
-**2. Backend** (Python, FastAPI, Pydantic)
-Exposes REST endpoints for prediction, doctors, slots, and appointments.
+Common problems include:
 
-**3. Data & ML Layer** (Pandas, scikit-learn, Joblib, SQLite)
-Trains and serves the classifier and manages all persistent data.
+- Complex forms and manual data entry
+- Difficulty describing symptoms using medical terminology
+- Confusion about which specialist to consult
+- Separate symptom-checking and appointment-booking workflows
+- Repetitive basic intake tasks
+
+### Our Approach
+
+Healthcare AI combines these steps into one simple workflow:
+
+```text
+Patient Symptoms
+      ↓
+Basic Screening Assistance
+      ↓
+Specialist Recommendation
+      ↓
+Doctor Selection
+      ↓
+Appointment Booking
+```
 
 ---
 
-## 🛠️ Tech Stack
+# ✨ Key Features
+
+| Feature | Description |
+|---|---|
+| 🎙️ Voice Input | Browser-based speech-to-text using Web Speech API |
+| ⌨️ Text Input | Direct symptom entry |
+| 🧠 Rule-Based NLP | Recognizes predefined symptoms and aliases |
+| 🤖 ML Prediction | Local Bernoulli Naive Bayes model |
+| 🛡️ Safety Check | Checks selected red-flag symptom combinations |
+| 👨‍⚕️ Specialist Mapping | Maps possible conditions to specialist categories |
+| 🏥 Doctor Lookup | Retrieves doctors from SQLite |
+| 📅 Slot Management | Displays available appointment slots |
+| ✅ Appointment Booking | Stores confirmed appointments locally |
+| 🗄️ SQLite Storage | Stores doctors, slots, appointments and symptom history |
+| 🔒 Local ML | Core prediction does not require an external AI API |
+
+---
+
+# 🧠 How It Works
+
+## 1. Voice or Text Input
+
+Example:
+
+```text
+I have fever, headache and chills.
+```
+
+The user can either type the sentence or speak through the microphone.
+
+## 2. Speech-to-Text
+
+```text
+🎙️ Voice
+   ↓
+Web Speech API
+   ↓
+"I have fever, headache and chills."
+```
+
+## 3. Rule-Based NLP
+
+The local NLP processor identifies recognized symptoms.
+
+```text
+"I have fever, headache and chills."
+              ↓
+fever
+headache
+chills
+```
+
+It can also recognize aliases such as:
+
+```text
+high BP     → Hypertension
+pimples     → Acne
+asthmatic   → Asthma
+```
+
+## 4. Safety Check
+
+Before normal ML screening, the application checks selected red-flag symptoms.
+
+Example:
+
+```text
+Chest pain + difficulty breathing
+              ↓
+       Urgent Warning
+```
+
+This is only a basic software safeguard and is **not an emergency medical detection system**.
+
+## 5. Machine Learning
+
+Symptoms are converted into binary features:
+
+```text
+1 = Present
+0 = Absent
+```
+
+Example:
+
+```text
+fever       = 1
+cough       = 0
+headache    = 1
+vomiting    = 0
+chills      = 1
+```
+
+These features are passed to the local **Bernoulli Naive Bayes** model.
+
+## 6. Possible Condition
+
+The model returns a ranked prediction.
+
+Example:
+
+```text
+Possible Condition:
+Malaria
+
+Confidence:
+98.80%
+```
+
+This is a screening prediction, **not a diagnosis**.
+
+## 7. Specialist Recommendation
+
+Examples:
+
+```text
+Asthma
+   ↓
+Pulmonologist
+```
+
+```text
+Migraine
+   ↓
+Neurologist
+```
+
+```text
+Acne / Eczema
+   ↓
+Dermatologist
+```
+
+## 8. Doctor and Slot Selection
+
+The application retrieves matching doctors and available appointment slots from SQLite.
+
+## 9. Appointment Booking
+
+The user enters patient details, selects a slot, and confirms the appointment.
+
+The selected slot is marked as booked.
+
+---
+
+# 🏗️ System Architecture
+
+```text
+                         USER
+                          │
+                 ┌────────┴────────┐
+                 │                 │
+               VOICE              TEXT
+                 │                 │
+                 └────────┬────────┘
+                          │
+                          ▼
+                ┌─────────────────┐
+                │  Web Speech API │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │ Rule-Based NLP  │
+                └────────┬────────┘
+                         │
+                         ▼
+                ┌─────────────────┐
+                │  Safety Check   │
+                └────────┬────────┘
+                         │
+              ┌──────────┴──────────┐
+              │                     │
+          Red Flag                Normal
+              │                     │
+              ▼                     ▼
+       Urgent Warning       Bernoulli Naive
+                              Bayes Model
+                                   │
+                                   ▼
+                          Possible Condition
+                                   │
+                                   ▼
+                         Specialist Mapping
+                                   │
+                                   ▼
+                              FastAPI
+                                   │
+                                   ▼
+                              SQLite
+                                   │
+                  ┌────────────────┼────────────────┐
+                  │                │                │
+               Doctors           Slots        Appointments
+```
+
+---
+
+# 🤖 Machine Learning
+
+## Model
+
+### Bernoulli Naive Bayes
+
+The project uses Bernoulli Naive Bayes because the symptom representation is binary:
+
+```text
+1 → Symptom Present
+0 → Symptom Absent
+```
+
+The model learns patterns between symptom presence/absence and condition labels in the training dataset.
+
+### Prediction Flow
+
+```text
+User Symptoms
+      ↓
+Recognized Symptoms
+      ↓
+Binary Features
+      ↓
+Bernoulli Naive Bayes
+      ↓
+Ranked Predictions
+      ↓
+Possible Condition
+```
+
+---
+
+# 📊 Model Evaluation
+
+The current model uses a **500-record synthetic educational dataset**.
+
+| Metric | Value |
+|---|---:|
+| Total Records | 500 |
+| Training Records | 375 |
+| Testing Records | 125 |
+| Symptom Features | 20 |
+| Conditions | 10 |
+| Test Accuracy | **96.80%** |
+
+> **Important:** This accuracy is measured on a synthetic educational test dataset. It does not represent clinical accuracy and has not been medically validated.
+
+---
+
+# 🧪 Dataset
+
+The dataset is synthetic and intended for academic demonstration.
+
+### Dataset Size
+
+```text
+500 Records
+20 Symptom Features
+10 Conditions
+50 Records per Condition
+```
+
+### Supported Conditions
+
+1. Common Cold
+2. Flu
+3. Migraine
+4. Acne
+5. Eczema
+6. Asthma
+7. Bronchitis
+8. Hypertension
+9. Coronary Artery Disease
+10. Malaria
+
+### Symptom Features
+
+```text
+fever
+cough
+fatigue
+headache
+sore_throat
+runny_nose
+shortness_of_breath
+chest_pain
+wheezing
+dizziness
+nausea
+vomiting
+skin_rash
+itching
+joint_pain
+muscle_ache
+palpitations
+loss_of_appetite
+high_fever
+chills
+```
+
+---
+
+# 🩺 Specialist Mapping
+
+| Possible Condition | Specialist |
+|---|---|
+| Common Cold | General Physician |
+| Flu | General Physician |
+| Malaria | General Physician |
+| Acne | Dermatologist |
+| Eczema | Dermatologist |
+| Asthma | Pulmonologist |
+| Bronchitis | Pulmonologist |
+| Hypertension | Cardiologist |
+| Coronary Artery Disease | Cardiologist |
+| Migraine | Neurologist |
+
+This mapping is part of the educational application workflow and is not a substitute for professional medical referral.
+
+---
+
+# 🛠️ Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Frontend | HTML, CSS, JavaScript |
 | Voice | Web Speech API |
 | Backend | Python, FastAPI, Pydantic |
-| NLP | Python regex / rule-based |
-| ML | scikit-learn (Multinomial Naive Bayes) |
+| Server | Uvicorn |
+| NLP | Python Regex / Rule-Based NLP |
+| Machine Learning | Bernoulli Naive Bayes |
 | Data Processing | Pandas |
-| Model Storage | Joblib |
+| Model Storage | JSON |
 | Database | SQLite |
 | API Style | REST |
+| Development | VS Code |
+| Version Control | Git / GitHub |
 
 ---
 
-## 📂 Project Structure
+# 📂 Project Structure
 
 ```text
-Healthcare-AI/
+Healthcare ai/
+│
 ├── backend/
 │   ├── data/
-│   │   └── symptoms_dataset.csv
+│   │   ├── symptoms_dataset.csv
+│   │   └── medivoice.db
+│   │
 │   ├── models/
-│   │   ├── disease_classifier.joblib
-│   │   └── mlb.joblib
-│   ├── database.py          # SQLite connection & queries
-│   ├── nlp_processor.py     # Rule-based symptom extraction
-│   ├── predictor.py         # Loads model, returns predictions
-│   ├── seed_data.py         # Creates DB, seeds doctors & slots
-│   ├── test_pipeline.py     # Pipeline test script
-│   └── train_model.py       # Trains and saves the classifier
+│   │   └── disease_classifier.json
+│   │
+│   ├── database.py
+│   ├── seed_data.py
+│   ├── nlp_processor.py
+│   ├── train_model.py
+│   ├── predictor.py
+│   └── test_pipeline.py
+│
 ├── frontend/
-│   ├── app.js
 │   ├── index.html
-│   └── style.css
-├── main.py                  # FastAPI entry point
+│   ├── style.css
+│   └── app.js
+│
+├── main.py
+├── requirements.txt
 ├── .gitignore
 └── README.md
 ```
 
 ---
 
-## 🚀 Getting Started
+# 🗄️ Database
 
-### Prerequisites
+The application uses a local SQLite database:
 
-- Python 3.9 or newer
-- A modern browser (Chrome or Edge recommended for voice input)
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/Healthcare-AI.git
-cd Healthcare-AI
+```text
+backend/data/medivoice.db
 ```
 
-### 2. Create and activate a virtual environment
+## Doctors
 
-**Windows (PowerShell)**
+```text
+id
+name
+specialization
+hospital
+contact
+fee
+```
+
+## Slots
+
+```text
+id
+doctor_id
+date
+start_time
+end_time
+is_booked
+```
+
+## Appointments
+
+```text
+id
+slot_id
+doctor_id
+patient_name
+patient_contact
+disease_predicted
+symptoms
+created_at
+```
+
+## Symptom History
+
+```text
+id
+patient_name
+symptoms
+disease_predicted
+created_at
+```
+
+---
+
+# 🔌 API Reference
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/` | Application status |
+| GET | `/health` | Backend health check |
+| POST | `/predict` | Process symptoms and return prediction |
+| GET | `/doctors` | Retrieve doctors |
+| GET | `/doctors/{doctor_id}/slots` | Retrieve available slots |
+| POST | `/appointments` | Create an appointment |
+
+FastAPI interactive documentation:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+# 🚀 Getting Started
+
+## Prerequisites
+
+- Python 3.9+
+- Modern web browser
+- Chrome or Edge recommended for voice functionality
+- Git
+
+## 1. Clone the Repository
+
+```powershell
+git clone https://github.com/namantalesra-fba/Healthcare-ai.git
+cd Healthcare-ai
+```
+
+## 2. Create Virtual Environment
+
 ```powershell
 python -m venv venv
+```
+
+Activate:
+
+```powershell
 .\venv\Scripts\Activate.ps1
 ```
 
-**macOS / Linux**
-```bash
-python3 -m venv venv
-source venv/bin/activate
+If activation is blocked, use the virtual environment Python directly.
+
+## 3. Install Dependencies
+
+```powershell
+.\venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 3. Install dependencies
-
-```bash
-pip install fastapi uvicorn pandas scikit-learn joblib pydantic
-```
-
-### 4. Initialize the database
-
-```bash
-python backend/seed_data.py
-```
-
-Creates the local SQLite database and seeds doctors and appointment slots.
-
-### 5. Train the model
-
-```bash
-python backend/train_model.py
-```
-
-Generates `backend/models/disease_classifier.joblib` and `backend/models/mlb.joblib`.
-
-### 6. Run the backend
-
-From the project root:
-
-```bash
-python -m uvicorn main:app --reload
-```
-
-- API: http://127.0.0.1:8000
-- Interactive docs (Swagger): http://127.0.0.1:8000/docs
-
-### 7. Run the frontend
-
-In a **second terminal**:
-
-```bash
-python -m http.server 5500 --directory frontend
-```
-
-Open http://127.0.0.1:5500
-
----
-
-## 🧪 Usage & Demo
-
-**Normal flow.** Enter:
+Main dependencies:
 
 ```text
-I have a headache, nausea and I have been vomiting since morning.
+fastapi
+uvicorn
+pandas
+pydantic
 ```
 
-The app will:
+## 4. Initialize the Database
 
-1. Extract `headache`, `nausea`, `vomiting`
-2. Run the ML prediction
-3. Show the possible condition
-4. Recommend a specialist
-5. List matching doctors
-6. Show available slots
-7. Book your appointment
+```powershell
+.\venv\Scripts\python.exe backend\seed_data.py
+```
 
-**Emergency flow.** Enter:
+This creates the local demonstration database, doctors and appointment slots.
+
+## 5. Train the ML Model
+
+```powershell
+.\venv\Scripts\python.exe backend\train_model.py
+```
+
+This creates:
 
 ```text
-I have chest pain and difficulty breathing.
+backend/models/disease_classifier.json
 ```
 
-The normal screening is stopped and an urgent medical warning is shown instead.
+The model does not need to be retrained every time the application starts.
+
+Retrain when the dataset or training code changes.
+
+## 6. Start the Backend
+
+```powershell
+.\venv\Scripts\python.exe main.py
+```
+
+Backend:
+
+```text
+http://127.0.0.1:8000
+```
+
+## 7. Start the Frontend
+
+Open another terminal:
+
+```powershell
+.\venv\Scripts\python.exe -m http.server 5500 --directory frontend
+```
+
+Open:
+
+```text
+http://127.0.0.1:5500
+```
 
 ---
 
-## 🔌 API Reference
+# 🧪 Example Usage
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/` | Root / welcome |
-| `GET` | `/health` | Health check |
-| `POST` | `/predict` | Extract symptoms and predict possible conditions |
-| `GET` | `/doctors` | List doctors (optionally by specialization) |
-| `GET` | `/doctors/{doctor_id}/slots` | Available slots for a doctor |
-| `POST` | `/appointments` | Book an appointment |
+### Example 1
 
-Full request/response schemas are available at `/docs` while the server is running.
+Input:
 
----
+```text
+I have runny nose and fever
+```
 
-## 🤖 Machine Learning Details
+Processing:
 
-- **Model:** Multinomial Naive Bayes
-- **Features:** Binary symptom indicators
-- **Split:** Manual 75/25 train-test split
-- **Storage:** Joblib artifacts in `backend/models/`
+```text
+Input
+ ↓
+NLP
+ ↓
+runny_nose + fever
+ ↓
+Bernoulli Naive Bayes
+ ↓
+Possible Condition
+ ↓
+Specialist
+```
 
-**Demo dataset**
+### Example 2
 
-| Rows | Symptom features | Condition classes |
-|---|---|---|
-| 39 | 20 | 10 |
+Input:
 
-**Symptom features:** `fever`, `cough`, `fatigue`, `headache`, `sore_throat`, `runny_nose`, `shortness_of_breath`, `chest_pain`, `wheezing`, `dizziness`, `nausea`, `vomiting`, `skin_rash`, `itching`, `joint_pain`, `muscle_ache`, `palpitations`, `loss_of_appetite`, `high_fever`, `chills`
+```text
+I have headache and vomiting
+```
 
-**Condition → Specialist mapping (examples)**
+Extracted symptoms:
 
-| Condition | Specialist |
-|---|---|
-| Common Cold, Flu, Malaria | General Physician |
-| Acne, Eczema | Dermatologist |
-| Asthma, Bronchitis | Pulmonologist |
-| Hypertension, Coronary Artery Disease | Cardiologist |
-| Migraine | Neurologist |
+```text
+headache
+vomiting
+```
 
----
+The symptoms are then passed to the ML model.
 
-## 🧠 NLP Details
+### Example 3
 
-Symptom extraction uses predefined patterns and regular expressions, with no external AI service.
+Input:
 
-| User says | Mapped to |
-|---|---|
-| "my head hurts" | `headache` |
-| "throwing up" | `vomiting` |
+```text
+I have high BP
+```
 
-Benefits: **local, fast, API-free, and easy to understand and demo.**
+Recognized disease:
 
----
+```text
+Hypertension
+```
 
-## 🗄️ Database Schema
-
-| Table | Stores |
-|---|---|
-| `doctors` | Name, specialization, hospital, contact, consultation fee |
-| `slots` | Doctor, date, start time, end time, booking status |
-| `appointments` | Patient name, contact, doctor, slot, predicted condition, symptoms, created timestamp |
-| `symptom_history` | Record of submitted symptoms |
+The system then maps it to the corresponding specialist category.
 
 ---
 
-## 🚨 Safety Layer
+# 🚨 Safety Layer
 
-The frontend runs an emergency check before any prediction. Combinations such as **chest pain + difficulty breathing** immediately stop the screening flow and display an urgent warning. Emergency cases are never treated as ordinary prediction requests.
+The application includes a basic safety layer before normal ML screening.
 
----
+Example:
 
-## ⚠️ Limitations
+```text
+Chest pain
++
+Difficulty breathing
+        ↓
+Urgent Warning
+```
 
-- The dataset is **tiny (39 rows)** and not medically validated, so predictions are illustrative only.
-- NLP is rule-based and recognizes only predefined phrases.
-- The emergency check covers a limited set of combinations.
-- Voice input depends on browser support for the Web Speech API (best in Chrome/Edge; some browsers send audio to a cloud service for recognition).
-- No authentication or user accounts.
+Conceptual flow:
 
----
+```text
+User Input
+    ↓
+NLP
+    ↓
+Safety Check
+    │
+    ├── Red Flag → Urgent Warning
+    │
+    └── Normal → ML Prediction
+```
 
-## 🧰 Troubleshooting
-
-| Problem | Fix |
-|---|---|
-| `ModuleNotFoundError` | Activate the virtual environment and re-run the `pip install` command |
-| Prediction fails / model not found | Run `python backend/train_model.py` first |
-| No doctors or slots appear | Run `python backend/seed_data.py` |
-| Frontend can't reach the API | Make sure the backend is running on port 8000 and CORS allows your frontend origin |
-| Microphone doesn't work | Use Chrome or Edge, allow mic permission, and open via `http://127.0.0.1` / `localhost` |
-| PowerShell blocks activation | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` and retry |
-
----
-
-## 🔮 Future Scope
-
-- Larger, medically validated datasets
-- Transformer-based symptom understanding
-- Multilingual voice input
-- Authentication, plus doctor and patient dashboards
-- Appointment cancellation and rescheduling
-- Medical record management
-- More advanced emergency detection
-- Explainable ML predictions
-- Cloud deployment and a mobile app
+This layer is only a predefined software safeguard. It does not determine medical emergency severity and does not replace emergency services or professional medical care.
 
 ---
 
-## 🤝 Contributing
+# 📱 Complete User Workflow
 
-Contributions are welcome.
-
-1. Fork the repository
-2. Create a branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "Add your feature"`
-4. Push: `git push origin feature/your-feature`
-5. Open a Pull Request
+```text
+1. Open Healthcare AI
+        ↓
+2. Speak or type symptoms
+        ↓
+3. Analyze symptoms
+        ↓
+4. NLP extracts recognized symptoms
+        ↓
+5. Safety check
+        ↓
+6. ML prediction
+        ↓
+7. Possible condition displayed
+        ↓
+8. Specialist recommended
+        ↓
+9. Doctors displayed
+        ↓
+10. Available slots displayed
+        ↓
+11. Patient details entered
+        ↓
+12. Appointment confirmed
+        ↓
+13. Appointment stored in SQLite
+```
 
 ---
 
-## 📄 License
+# ⚠️ Limitations
 
-Add your preferred license here (for example, MIT) and include a `LICENSE` file in the repository.
+### Synthetic Dataset
+
+The current 500-record dataset is synthetic and intended for educational demonstration.
+
+### Limited Conditions
+
+The model currently supports 10 condition classes.
+
+### Rule-Based NLP
+
+The NLP layer recognizes predefined vocabulary and aliases and cannot understand every possible description.
+
+### Model Limitations
+
+Bernoulli Naive Bayes is a lightweight educational model and is not a clinical diagnostic model.
+
+### Voice Recognition
+
+Voice functionality depends on browser support and microphone permissions.
+
+### Local Demonstration Doctors
+
+Doctor and hospital records are demonstration records and are not verified healthcare-provider records.
+
+### No Real Hospital Integration
+
+The application does not connect to hospital systems or real appointment platforms.
+
+### No Production Authentication
+
+The current prototype does not provide production-grade patient authentication or account management.
 
 ---
 
-## ⚠️ Medical Disclaimer
+# 🔮 Future Scope
 
-Healthcare AI is an educational project. Its predictions come from a small demonstration dataset and must **not** be treated as medical advice, diagnosis, or treatment. For real medical concerns, consult a qualified healthcare professional.
+## 1. Larger Validated Dataset
+
+Use larger, carefully validated datasets from reliable medical sources.
+
+## 2. More Conditions
+
+Expand supported conditions and symptoms.
+
+## 3. Better NLP
+
+Improve natural-language understanding and symptom normalization.
+
+## 4. Multilingual Voice
+
+Add Hindi and other Indian-language voice support.
+
+## 5. Explainable Predictions
+
+Show which recognized symptoms influenced the screening result.
+
+## 6. Verified Doctors
+
+Integrate verified healthcare providers.
+
+## 7. Secure Authentication
+
+Add secure user accounts and appropriate patient-data protection.
+
+## 8. Real Appointment Integration
+
+Connect with legitimate healthcare scheduling systems.
+
+## 9. Notifications
+
+Add appointment reminders and confirmations.
+
+## 10. Improved Local AI
+
+Explore more capable local AI models while maintaining privacy and reducing dependence on external APIs.
+
+---
+
+# 📈 Project Highlights
+
+| Metric | Value |
+|---|---:|
+| Educational Records | **500** |
+| Symptom Features | **20** |
+| Supported Conditions | **10** |
+| ML Algorithm | **Bernoulli Naive Bayes** |
+| Training Records | **375** |
+| Testing Records | **125** |
+| Test Accuracy | **96.80%** |
+| External AI APIs | **0** |
+| Database | **SQLite** |
+
+---
+
+# 👥 Project Team
+
+## Project Exhibition Group 239
+
+| # | Name | Registration No. | Contribution |
+|---:|---|---|---|
+| 1 | Naman Talesra | 25BAI11621 | Backend & ML Integration |
+| 2 | Dhirtiman Das | 25BAI11413 | NLP & Symptom Processing |
+| 3 | Abhinav Gupta | 25BAI10929 | Machine Learning & Prediction |
+| 4 | Anurag Dubey | 23BAI11240 | Voice Interface & Frontend |
+| 5 | Abhimanyu | 25BAI10964 | Database & Application Integration |
+
+---
+
+# 🎓 Academic Information
+
+**Project:** Healthcare AI
+
+**Course:** Project Exhibition – I
+
+**Course Code:** DSN2098
+
+**Project Exhibition Group:** 239
+
+**Supervisor:** Dr. Abdul Rehman
+
+**Reviewer 1:** Dr. D Lakshmi
+
+**Reviewer 2:** Chayan Paul
+
+---
+
+# 🔒 Privacy & Data
+
+The core machine-learning prediction pipeline runs locally.
+
+The application does not require:
+
+- OpenAI API
+- Gemini API
+- ChatGPT API
+- External AI inference APIs
+
+The local SQLite database stores demonstration doctors, appointment slots, appointments and symptom history.
+
+The database file is excluded from Git version control through `.gitignore`.
+
+---
+
+# 🛡️ Medical Disclaimer
+
+Healthcare AI is an educational software project.
+
+Its predictions are generated from a synthetic demonstration dataset and **must not be treated as medical advice, diagnosis, or treatment recommendations**.
+
+The application does not replace:
+
+- Doctors
+- Hospitals
+- Emergency services
+- Professional medical consultation
+
+For serious or emergency medical concerns, seek immediate professional medical assistance.
+
+---
+
+# 🤝 Contributing
+
+For educational development:
+
+```powershell
+git checkout -b feature/your-feature
+```
+
+Make changes:
+
+```powershell
+git add .
+git commit -m "Add your feature"
+git push origin feature/your-feature
+```
+
+Then open a Pull Request.
+
+---
+
+# 📜 License
+
+This project is intended primarily for educational and academic demonstration.
+
+Add an appropriate open-source license if the team decides to distribute the project publicly.
 
 ---
 
 <div align="center">
 
-**Healthcare AI** is a college project combining Voice Recognition, NLP, Machine Learning, FastAPI, SQLite, and Appointment Management into a local, API-free demonstration.
+# 🩺 Healthcare AI
+
+### Voice → NLP → Safety → Machine Learning → Specialist → Doctor → Appointment
+
+**Local • API-Free • AI-Assisted • Educational Prototype**
+
+<br>
+
+**Project Exhibition – I | Group 239**
 
 </div>
